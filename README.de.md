@@ -13,7 +13,7 @@ node bin/codemap.mjs /pfad/zum/repo --name MeinProjekt            # schreibt cod
 node bin/codemap.mjs src/modul.ts                                 # eine einzelne Datei als Schnipsel
 cat schnipsel.py | node bin/codemap.mjs --stdin --lang py         # Text von der Standardeingabe
 node bin/codemap.mjs repo --json modell.json --fragment           # Modell als JSON, HTML nur als Seiteninhalt
-node --test test/                                                 # Tests
+node --test test/*.test.mjs                                                 # Tests
 ```
 
 Die HTML-Datei öffnest du in jedem Browser, offline, und kannst sie verschicken.

@@ -15,7 +15,7 @@ node bin/codemap.mjs /path/to/your/repo --name MyProject      # writes codemap-M
 node bin/codemap.mjs src/module.ts                            # a single file as a snippet
 cat snippet.py | node bin/codemap.mjs --stdin --lang py       # code from standard input
 node bin/codemap.mjs repo --json model.json --fragment        # model as JSON, HTML as page content only
-node --test test/                                             # tests
+node --test test/*.test.mjs                                             # tests
 ```
 
 Open the HTML file in any browser. It works offline and can be mailed or archived.

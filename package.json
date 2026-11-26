@@ -5,7 +5,7 @@
   "type": "module",
   "bin": { "codemap": "bin/codemap.mjs" },
   "engines": { "node": ">=18" },
-  "scripts": { "test": "node --test test/" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
   "keywords": ["architecture", "visualization", "hexagonal", "ports-and-adapters", "dependency-graph", "code-map"],
   "repository": { "type": "git", "url": "git+https://github.com/sebastianpforr/codemap.git" },
   "license": "MIT"
