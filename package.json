@@ -1,0 +1,12 @@
+{
+  "name": "codemap",
+  "version": "0.2.0",
+  "description": "Explains code as a 2D map: domain modules, ports, adapters and cross-cutting concerns as one offline HTML file",
+  "type": "module",
+  "bin": { "codemap": "bin/codemap.mjs" },
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/" },
+  "keywords": ["architecture", "visualization", "hexagonal", "ports-and-adapters", "dependency-graph", "code-map"],
+  "repository": { "type": "git", "url": "git+https://github.com/sebastianpforr/codemap.git" },
+  "license": "MIT"
+}

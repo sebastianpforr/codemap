@@ -1,0 +1,828 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: Kopf, Lesehilfe, dann Karte (links) und Detailspalte (rechts); auf dem Handy untereinander.
+   Palette: kühles Papier, Tinte, ein Blau als Akzent; Rot nur für Regelverstöße, Orange nur für Hinweise. */
+:root {
+  --bg: #f2f4f6; --surface: #ffffff; --surface-2: #e9edf1; --ink: #17212b; --muted: #566677; --line: #cfd7df;
+  --accent: #2459d3; --bad: #c9252d; --warn: #b4600a; --edge: #7a8896; --nl: 90%; --nstroke: 62%; --ink-on-node: #17212b;
+  --entry: #dde7fb; --entry-line: #7f9ae0; --orch: #ece4fa; --orch-line: #9a82d6; --bus: #d9dee4; --bus-line: #8b97a3;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151b; --surface: #17202a; --surface-2: #1e2a36; --ink: #e6edf3; --muted: #93a3b3; --line: #2b3947;
+    --accent: #6f9bff; --bad: #ff6b6b; --warn: #f0a04b; --edge: #6f7f8f; --nl: 24%; --nstroke: 46%; --ink-on-node: #eef3f8;
+    --entry: #1e2d4d; --entry-line: #4f6fb8; --orch: #2a2344; --orch-line: #7a63b8; --bus: #26323d; --bus-line: #5d6b78; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151b; --surface: #17202a; --surface-2: #1e2a36; --ink: #e6edf3; --muted: #93a3b3; --line: #2b3947;
+  --accent: #6f9bff; --bad: #ff6b6b; --warn: #f0a04b; --edge: #6f7f8f; --nl: 24%; --nstroke: 46%; --ink-on-node: #eef3f8;
+  --entry: #1e2d4d; --entry-line: #4f6fb8; --orch: #2a2344; --orch-line: #7a63b8; --bus: #26323d; --bus-line: #5d6b78; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; }
+h1 { font-size: 22px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; font-weight: 650; }
+.top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.chip b { color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+.chip.bad { border-color: var(--bad); color: var(--bad); } .chip.warn { border-color: var(--warn); color: var(--warn); }
+.intro { margin: 12px 0 0; max-width: 78ch; color: var(--ink); }
+.intro p { margin: 0 0 8px; }
+.work { display: grid; grid-template-columns: minmax(0, 1fr) 340px 340px; gap: 14px; margin-top: 14px; align-items: start; }
+@media (max-width: 1380px) { .work { grid-template-columns: minmax(0, 1fr) 340px; } #chat { grid-column: 1 / -1; max-height: none; } }
+@media (max-width: 960px) { .work { grid-template-columns: minmax(0, 1fr); } }
+#chat textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); resize: vertical; min-height: 64px; }
+.askbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.askbar .go { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 650; }
+.sugg { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.sugg button { font-size: 12.5px; padding: 2px 9px; border-radius: 999px; color: var(--muted); }
+.qa { border-top: 1px solid var(--line); padding: 10px 0; }
+.qa .q { font-weight: 650; margin: 0 0 4px; overflow-wrap: anywhere; }
+.qa .a { margin: 0; overflow-wrap: anywhere; } .qa .a p { margin: 0 0 6px; } .qa .a ul { margin: 0 0 6px; padding-left: 18px; }
+.qa .a code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 0 4px; border-radius: 4px; }
+.qa .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.qa.err .a { color: var(--bad); }
+
+.mapwrap { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.toolbar input[type=search] { flex: 1 1 140px; min-width: 0; font: inherit; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); }
+.toolbar label { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+button { font: inherit; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.map { height: min(74vh, 820px); min-height: 380px; position: relative; }
+svg#map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
+svg#map:active { cursor: grabbing; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 22px; height: 0; border-top: 3px solid var(--edge); display: inline-block; }
+.sw.warn { border-color: var(--warn); } .sw.bad { border-color: var(--bad); }
+.dotsw { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: inline-block; }
+aside { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; max-height: min(74vh, 820px); overflow: auto; }
+@media (max-width: 960px) { aside { max-height: none; } }
+aside h3 { margin: 0 0 2px; font-size: 17px; line-height: 1.25; }
+aside .role { display: inline-block; font-size: 12px; padding: 1px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); margin: 2px 0 8px; }
+aside p { margin: 6px 0; }
+aside h4 { margin: 14px 0 4px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.list li { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; min-width: 0; }
+.list button { border: 0; background: none; padding: 0; text-align: left; color: var(--accent); min-width: 0; overflow-wrap: anywhere; }
+.list .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; white-space: nowrap; }
+.mono { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.bad-t { color: var(--bad); } .warn-t { color: var(--warn); }
+.note { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.note.bad { border-left: 3px solid var(--bad); } .note.warn { border-left: 3px solid var(--warn); }
+/* Karte */
+.edge { fill: none; stroke: var(--edge); stroke-linecap: round; transition: opacity .12s; }
+.edge.warn { stroke: var(--warn); } .edge.bad { stroke: var(--bad); } .edge.wiring { stroke-dasharray: 3 5; }
+.dim { opacity: .13; } .edge.dim { opacity: .06; }
+.node { cursor: pointer; transition: opacity .12s; }
+.node text { fill: var(--ink-on-node); font-family: var(--font); pointer-events: none; }
+.node .t1 { font-size: 14px; font-weight: 650; } .node .t2 { font-size: 11px; opacity: .78; }
+.node .shape { stroke-width: 1.4; }
+.node.core .shape { fill: hsl(var(--h) 40% var(--nl)); stroke: hsl(var(--h) 42% var(--nstroke)); }
+.node.unknown .shape { fill: var(--surface-2); stroke: var(--muted); }
+.node.port .shape { fill: var(--surface); stroke: hsl(var(--h) 45% var(--nstroke)); stroke-width: 2.2; }
+.node.adapter .shape { fill: hsl(var(--h) 14% var(--nl)); stroke: hsl(var(--h) 16% var(--nstroke)); }
+.node.entrypoint .shape { fill: var(--entry); stroke: var(--entry-line); }
+.node.orchestration .shape { fill: var(--orch); stroke: var(--orch-line); }
+.node.runtime .shape { fill: var(--surface); stroke: var(--muted); stroke-dasharray: 5 4; }
+.node.shared .shape { fill: var(--surface-2); stroke: var(--muted); stroke-dasharray: 2 3; }
+.node.crosscut .shape { fill: var(--bus); stroke: var(--bus-line); }
+.node.sel .shape { stroke: var(--accent); stroke-width: 3; }
+.node.hit .shape { stroke: var(--accent); stroke-width: 2.6; }
+.hex { fill: hsl(215 30% 50% / .06); stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 5; }
+.band { fill: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-family: var(--font); }
+.cdot { stroke: var(--surface); stroke-width: 1.5; }
+.ecount { fill: var(--ink); font-size: 11px; font-family: var(--font); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.empty { padding: 30px 16px; color: var(--muted); }
+/* Innenansicht */
+.chip-f .shape { fill: var(--surface); stroke: hsl(var(--h) 38% var(--nstroke)); stroke-width: 1.3; }
+.chip-f.ext .shape { fill: hsl(var(--h) 40% var(--nl)); }
+.chip-f.internal .shape { stroke-dasharray: 3 3; stroke: var(--line); }
+.chip-f.sel .shape { stroke: var(--accent); stroke-width: 2.8; }
+.chip-f text { fill: var(--ink-on-node); font-family: var(--mono); font-size: 11.5px; pointer-events: none; }
+.chip-f text.l { font-size: 10px; opacity: .6; }
+.chip-f, .fnode { cursor: pointer; transition: opacity .12s; }
+.box { fill: hsl(var(--h) 30% 50% / .07); stroke: hsl(var(--h) 40% var(--nstroke)); stroke-width: 1.6; }
+.boxlabel { fill: var(--ink); font-family: var(--font); font-size: 15px; font-weight: 700; }
+.boxsub { fill: var(--muted); font-family: var(--font); font-size: 11.5px; }
+.more { fill: var(--muted); font-family: var(--font); font-size: 12px; }
+.sym { padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }
+.sym summary { cursor: pointer; } .sym.dimmed { opacity: .6; }
+.g { display: inline-block; width: 1.3em; text-align: center; font-family: var(--mono); font-weight: 700; color: var(--accent); }
+.mem { margin: 4px 0 4px 1.5em; padding: 0; list-style: none; font-family: var(--mono); font-size: 12px; color: var(--muted); } .mem li { overflow-wrap: anywhere; }
+.card .shape { fill: var(--surface); stroke: hsl(var(--h) 38% var(--nstroke)); stroke-width: 1.3; }
+.card.sel .shape { stroke: var(--accent); stroke-width: 2.8; }
+.card text { fill: var(--ink-on-node); font-family: var(--mono); pointer-events: none; }
+.card .ch { font-size: 12px; font-weight: 700; } .card .cl { font-size: 10.5px; } .card .cm { font-size: 10.5px; opacity: .72; } .card .cn { opacity: .5; }
+.card .cg { font-weight: 700; fill: var(--accent); }
+.card.dim, .chip-f.dim { opacity: .2; }
+.tools { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.crumb { position: absolute; left: 10px; top: 10px; z-index: 3; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: calc(100% - 20px); background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 9px; padding: 4px 6px; font-size: 12.5px; }
+.crumb button { padding: 2px 9px; } .crumb .cur { color: var(--muted); padding: 0 4px; overflow-wrap: anywhere; }
+.back { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.ftag { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.frow { padding: 4px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.frow:hover .mono { color: var(--accent); }
+.frow.sel { background: var(--surface-2); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main>
+  <div class="top">
+    <h1 id="title"></h1>
+    <div class="chips" id="chips"></div>
+  </div>
+  <section class="intro" id="intro"></section>
+  <div class="work">
+    <div class="mapwrap">
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="Baustein suchen" aria-label="Baustein suchen">
+        <label><input type="checkbox" id="tWiring"> Verdrahtung zeigen</label>
+        <label><input type="checkbox" id="tIssues"> nur Hinweise</label>
+        <label id="symlab" hidden><input type="checkbox" id="tSym"> Funktionen zeigen</label><button id="inner" class="back" hidden>Innenansicht</button><button id="back" class="back" hidden>← Übersicht</button>
+        <button id="zin" aria-label="Vergrößern">+</button><button id="zout" aria-label="Verkleinern">−</button><button id="zfit">Alles</button>
+      </div>
+      <div class="map"><div class="crumb" id="crumb" hidden></div><svg id="map" role="img" aria-label="Architekturkarte"></svg></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <aside id="panel" aria-live="polite"></aside>
+    <aside id="chat" aria-label="Fragen zum Code">
+      <h3>Fragen zum Code</h3>
+      <p class="ftag" id="cctx"></p>
+      <textarea id="cq" rows="3" placeholder="Frage zum Code, z. B. „Was macht Communication?“" aria-label="Frage zum Code"></textarea>
+      <div class="askbar"><button id="cgo" class="go">Fragen</button><button id="cstop" hidden>Stopp</button><span class="ftag" id="cstate"></span></div>
+      <div class="sugg" id="csugg"></div>
+      <div id="canswers"></div>
+      <p class="ftag" id="cnote"></p>
+    </aside>
+  </div>
+</main>
+
+<script type="application/json" id="data">__DATA__</script>
+<script>
+(() => {
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const fmt = (n) => n.toLocaleString('de-DE');
+const ST = { sel: null, view: 'map', file: null, query: '', detail: false };
+const GL = { fn: 'ƒ', class: 'C', iface: 'I', type: 'T', schema: 'S', enum: 'E', const: 'c', m: '·' };
+const NW = 176, NH = 58, PW = 148, PH = 48, GX = 22, GY = 16;
+const SHORTR = { entrypoint: 'Eingang', core: 'Fachmodul', port: 'Ports', adapter: 'Adapter', orchestration: 'Ablauf', runtime: 'Start', crosscut: 'Querschnitt', shared: 'Gemeinsam', unknown: 'Baustein' };
+const LN = { js: 'JS/TS', py: 'Python', java: 'Java/Kotlin', go: 'Go', rs: 'Rust', php: 'PHP', cs: 'C#' };
+let api = {};
+
+function boot(D) {
+const U = new Map(D.units.map((u) => [u.id, u]));
+const RL = D.roleLabels;
+const dupes = new Set(D.units.map((u) => u.label).filter((l, i, a) => a.indexOf(l) !== i));
+const name = (id) => { const u = U.get(id); return u ? (dupes.has(u.label) ? `${u.label} (${SHORTR[u.role]})` : u.label) : id; };
+const base = (p) => p.split('/').pop();
+const EK = new Map(D.edges.map((e) => [e.from + '>' + e.to, e]));
+if (ST.sel && !U.has(ST.sel)) { ST.sel = null; ST.view = 'map'; ST.file = null; }
+
+// ---------- Übersicht: Layout (deterministisch) ----------
+const by = (r) => D.units.filter((u) => u.role === r);
+const ent = by('entrypoint'), orch = by('orchestration'), adp = by('adapter'), run = by('runtime'), shr = by('shared'), crs = by('crosscut');
+const core = D.units.filter((u) => u.role === 'core' || u.role === 'unknown');
+const portsL = D.units.filter((u) => u.role === 'port' && u.side === 'left');
+const portsR = D.units.filter((u) => u.role === 'port' && u.side !== 'left');
+const W = new Map();
+for (const e of D.edges) { const k = [e.from, e.to].sort().join('|'); W.set(k, (W.get(k) || 0) + e.count); }
+const wt = (a, b) => W.get([a, b].sort().join('|')) || 0;
+const pos = new Map();
+function orderCore() {
+  const left = core.slice().sort((a, b) => (b.uses.length + b.usedBy.length) - (a.uses.length + a.usedBy.length));
+  const out = [];
+  if (left.length) out.push(left.shift());
+  while (left.length) {
+    let best = 0, bs = -1;
+    left.forEach((u, i) => { const s = out.reduce((a, o) => a + wt(u.id, o.id), 0) * 1000 + (u.uses.length + u.usedBy.length); if (s > bs) { bs = s; best = i; } });
+    out.push(left.splice(best, 1)[0]);
+  }
+  return out;
+}
+const coreOrd = orderCore();
+const cols = coreOrd.length <= 2 ? 1 : coreOrd.length <= 8 ? 2 : coreOrd.length <= 15 ? 3 : Math.ceil(Math.sqrt(coreOrd.length));
+const rows = Math.max(1, Math.ceil(coreOrd.length / cols));
+const coreW = cols * NW + (cols - 1) * GX, coreH = rows * NH + (rows - 1) * GY;
+const maxPorts = Math.max(portsL.length, portsR.length);
+const portsH = maxPorts ? maxPorts * (PH + 12) : 0;
+const hexW = Math.max(coreW * 1.45, coreW + 300, coreW * 1.34 + 270), hexH = Math.max(coreH + 130, portsH + 90);
+const stackH = (n, h) => (n ? n * h + (n - 1) * GY : 0);
+const sideH = Math.max(stackH(ent.length, NH), stackH(adp.length, NH), hexH);
+const orchBlock = orch.length ? NH + 70 : 0;
+const cy = orchBlock + sideH / 2, cx = 0;
+const hexL = cx - hexW / 2, hexR = cx + hexW / 2, slope = 0.15;
+const boundX = (y, side) => { const t = Math.min(1, Math.abs(y - cy) / (hexH / 2)); const d = t * slope * hexW; return side === 'L' ? hexL + d : hexR - d; };
+coreOrd.forEach((u, i) => { const r = Math.floor(i / cols), c = i % cols; pos.set(u.id, { x: cx - coreW / 2 + NW / 2 + c * (NW + GX), y: cy - coreH / 2 + NH / 2 + r * (NH + GY), w: NW, h: NH }); });
+const avgY = (u) => { let s = 0, n = 0; for (const e of D.edges) { const o = e.from === u.id ? e.to : e.to === u.id ? e.from : null; if (o && pos.has(o)) { s += pos.get(o).y * e.count; n += e.count; } } return n ? s / n : cy; };
+const place = (list, x, h, w) => {
+  const ord = list.map((u) => ({ u, k: avgY(u) })).sort((a, b) => a.k - b.k || a.u.label.localeCompare(b.u.label)).map((o) => o.u);
+  const H = stackH(ord.length, h);
+  ord.forEach((u, i) => pos.set(u.id, { x, y: cy - H / 2 + h / 2 + i * (h + GY), w, h }));
+};
+function placePorts(list, side) {
+  const ord = list.map((u) => ({ u, k: u.owner && pos.has(u.owner) ? pos.get(u.owner).y : avgY(u) })).sort((a, b) => a.k - b.k || a.u.label.localeCompare(b.u.label)).map((o) => o.u);
+  const n = ord.length; if (!n) return;
+  const span = Math.max(0, hexH - 90), step = n > 1 ? Math.min(PH + 12, span / (n - 1)) : 0;
+  ord.forEach((u, i) => { const y = cy - (step * (n - 1)) / 2 + i * step; pos.set(u.id, { x: boundX(y, side), y, w: PW, h: PH }); });
+}
+placePorts(portsL, 'L'); placePorts(portsR, 'R');
+const entX = hexL - PW / 2 - 70 - NW / 2, adpX = hexR + PW / 2 + 70 + NW / 2;
+place(ent, entX, NH, NW); place(adp, adpX, NH, NW);
+orch.forEach((u, i) => pos.set(u.id, { x: cx - ((orch.length - 1) * (NW + 28)) / 2 + i * (NW + 28), y: NH / 2, w: NW, h: NH }));
+const botY = cy + sideH / 2 + 70;
+const rowItems = [...run, ...shr];
+const rowW = rowItems.length * NW + (rowItems.length - 1) * GX;
+rowItems.forEach((u, i) => pos.set(u.id, { x: cx - rowW / 2 + NW / 2 + i * (NW + GX), y: botY + NH / 2, w: NW, h: NH }));
+const busLeft = entX - NW / 2, busRight = adpX + NW / 2;
+const busY0 = botY + (rowItems.length ? NH + 54 : 0);
+crs.forEach((u, i) => pos.set(u.id, { x: (busLeft + busRight) / 2, y: busY0 + 20 + i * 52, w: busRight - busLeft, h: 38 }));
+
+// ---------- SVG-Gerüst ----------
+const oldSvg = $('#map'); const svg = oldSvg.cloneNode(false); oldSvg.replaceWith(svg);
+const defs = el('defs', {}, svg);
+for (const [k, c] of [['ok', 'var(--edge)'], ['warn', 'var(--warn)'], ['bad', 'var(--bad)'], ['wiring', 'var(--edge)']]) {
+  const m = el('marker', { id: `ah-${k}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: c }, m);
+}
+const gView = el('g', {}, svg), gOver = el('g', {}, gView), gFocus = el('g', {}, gView);
+const gHex = el('g', {}, gOver), gEdges = el('g', {}, gOver), gNodes = el('g', {}, gOver), gTop = el('g', {}, gOver);
+const hex = [[hexL, cy], [hexL + slope * hexW, cy - hexH / 2], [hexR - slope * hexW, cy - hexH / 2], [hexR, cy], [hexR - slope * hexW, cy + hexH / 2], [hexL + slope * hexW, cy + hexH / 2]];
+const bandLabel = (txt, x, y) => { const t = el('text', { class: 'band', x, y, 'text-anchor': 'middle' }, gHex); t.textContent = txt; };
+if (core.length) {
+  el('polygon', { class: 'hex', points: hex.map((p) => p.join(',')).join(' ') }, gHex);
+  bandLabel(core.every((u) => u.role === 'unknown') ? 'Bausteine nach Ordnern' : 'Fachlogik – der Kern', cx, cy - hexH / 2 + 18);
+}
+if (ent.length) bandLabel('Eingänge – hier kommt etwas an', entX, cy - sideH / 2 - 14);
+if (adp.length) bandLabel('Adapter – Verbindung nach außen', adpX, cy - sideH / 2 - 14);
+if (orch.length) bandLabel('Ablaufsteuerung', cx, -12);
+if (run.length || shr.length) bandLabel([run.length ? 'Start & Verdrahtung' : '', shr.length ? 'Gemeinsam genutzt' : ''].filter(Boolean).join(' · '), cx, botY - 12);
+if (crs.length) bandLabel('Querschnitt – wird überall gebraucht', (busLeft + busRight) / 2, busY0 - 4);
+
+const trunc = (s, px, f, mono) => { let w = 0, i = 0; for (; i < s.length; i++) { w += (mono ? 0.6 : /[A-Z]/.test(s[i]) ? 0.64 : /[iljt .]/.test(s[i]) ? 0.34 : 0.54) * f; if (w > px) return s.slice(0, Math.max(1, i - 1)) + '…'; } return s; };
+function shapeFor(u, p, n) {
+  const x = p.x - p.w / 2, y = p.y - p.h / 2, w = p.w, h = p.h;
+  if (u.role === 'port') { const k = 14; return el('polygon', { class: 'shape', points: `${x + k},${y} ${x + w - k},${y} ${x + w},${p.y} ${x + w - k},${y + h} ${x + k},${y + h} ${x},${p.y}` }, n); }
+  if (u.role === 'entrypoint') { const k = 16; return el('polygon', { class: 'shape', points: `${x},${y} ${x + w - k},${y} ${x + w},${p.y} ${x + w - k},${y + h} ${x},${y + h}` }, n); }
+  if (u.role === 'orchestration') return el('rect', { class: 'shape', x, y, width: w, height: h, rx: h / 2 }, n);
+  if (u.role === 'adapter') return el('rect', { class: 'shape', x, y, width: w, height: h, rx: 2 }, n);
+  return el('rect', { class: 'shape', x, y, width: w, height: h, rx: 9 }, n);
+}
+function drawNode(u, p, parent, onClick) {
+  const n = el('g', { class: `node ${u.role}`, style: `--h:${u.owner && U.get(u.owner) ? U.get(u.owner).hue : u.hue}`, tabindex: 0, role: 'button', 'aria-label': `${u.label}, ${RL[u.role]}` }, parent);
+  shapeFor(u, p, n);
+  const bar = u.role === 'crosscut', isPort = u.role === 'port';
+  const nf = `${u.fileCount} ${u.fileCount === 1 ? 'Datei' : 'Dateien'}`;
+  const sub = bar ? `${RL[u.role]} · ${nf} · genutzt von ${u.usedBy.length} Bausteinen` : `${SHORTR[u.role]} · ${nf}`;
+  const t1 = el('text', { class: 't1', x: bar ? p.x - p.w / 2 + 14 : p.x, y: p.y - 4, 'text-anchor': bar ? 'start' : 'middle' }, n); t1.textContent = trunc(isPort && u.owner ? u.label.replace(/ · Ports$/, '') : u.label, p.w - 30, 14);
+  const t2 = el('text', { class: 't2', x: bar ? p.x - p.w / 2 + 14 : p.x, y: p.y + 13, 'text-anchor': bar ? 'start' : 'middle' }, n); t2.textContent = trunc(sub, bar ? p.w - 24 : p.w - 26, 11);
+  el('title', {}, n).textContent = `${u.label} – ${RL[u.role]}`;
+  n.addEventListener('click', (e) => { e.stopPropagation(); onClick(u); });
+  n.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(u); } });
+  return n;
+}
+const nodeEls = new Map();
+for (const u of D.units) {
+  const p = pos.get(u.id); if (!p) continue;
+  const n = drawNode(u, p, gNodes, (x) => select(x.id));
+  n.addEventListener('mouseenter', () => hover(u.id)); n.addEventListener('mouseleave', () => hover(null));
+  nodeEls.set(u.id, n);
+}
+const edgeEls = [];
+function anchors(a, b) {
+  if (b.x > a.x + a.w / 2 + 12) return [[a.x + a.w / 2, a.y], [b.x - b.w / 2, b.y], 'h'];
+  if (b.x < a.x - a.w / 2 - 12) return [[a.x - a.w / 2, a.y], [b.x + b.w / 2, b.y], 'h'];
+  return b.y >= a.y ? [[a.x, a.y + a.h / 2], [b.x, b.y - b.h / 2], 'v'] : [[a.x, a.y - a.h / 2], [b.x, b.y + b.h / 2], 'v'];
+}
+const curve = (p1, p2, dir) => (dir === 'h' ? `M${p1[0]},${p1[1]} C${(p1[0] + p2[0]) / 2},${p1[1]} ${(p1[0] + p2[0]) / 2},${p2[1]} ${p2[0]},${p2[1]}` : `M${p1[0]},${p1[1]} C${p1[0]},${(p1[1] + p2[1]) / 2} ${p2[0]},${(p1[1] + p2[1]) / 2} ${p2[0]},${p2[1]}`);
+for (const e of D.edges) {
+  if (e.cls === 'cross') continue;
+  const a = pos.get(e.from), b = pos.get(e.to); if (!a || !b) continue;
+  const fr = U.get(e.from).role; if (fr === 'crosscut' || fr === 'shared') continue;
+  const [p1, p2, dir] = anchors(a, b);
+  const cls = e.cls === 'violation' ? 'bad' : e.cls === 'warn' ? 'warn' : e.cls === 'wiring' ? 'wiring' : '';
+  const bw = 0.9 + Math.log2(e.count) * 0.45;
+  const path = el('path', { class: `edge ${cls}`, d: curve(p1, p2, dir), 'stroke-width': bw.toFixed(2), opacity: e.cls === 'ok' ? 0.38 : 0.85, 'marker-end': `url(#ah-${cls || 'ok'})` }, gEdges);
+  el('title', {}, path).textContent = `${name(e.from)} → ${name(e.to)}: ${e.count} Verweise${e.why ? ' – ' + e.why : ''}`;
+  edgeEls.push({ e, path, bw, mid: [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2] });
+}
+const dotEls = [];
+const crossTargets = [...crs, ...shr];
+const crossHue = (u) => (u.role === 'crosscut' ? 'var(--accent)' : `hsl(${u.hue} 45% 52%)`);
+for (const u of D.units) {
+  if (['crosscut', 'shared', 'runtime'].includes(u.role) || !pos.has(u.id)) continue;
+  const p = pos.get(u.id);
+  crossTargets.filter((t) => EK.has(u.id + '>' + t.id)).slice(0, 5).forEach((t, i) => {
+    const c = el('circle', { class: 'cdot', cx: p.x - p.w / 2 + 12 + i * 13, cy: p.y + p.h / 2, r: 6, fill: crossHue(t) }, gTop);
+    el('title', {}, c).textContent = `nutzt ${t.label}`;
+    dotEls.push({ c, u: u.id, t: t.id });
+  });
+}
+
+// ---------- Innenansicht: Dateien eines Bausteins ----------
+const CW = 196, CH = 30, CG = 8;
+let focusEdges = [], focusChips = [];
+function cardLines(u, f) {
+  const out = []; const port = u.role === 'port';
+  const syms = (f.sym || []).slice().sort((a, b) => b.x - a.x || a.l - b.l);
+  for (const sy of syms) {
+    out.push({ t: sy.k === 'fn' && sy.s ? sy.s : sy.n + (sy.s ? '  ' + sy.s : ''), k: sy.k, x: sy.x, i: 0 });
+    const mem = sy.m || [];
+    if (mem.length && (port || sy.k === 'iface' || sy.k === 'schema')) for (const q of mem.slice(0, port ? 8 : 4)) out.push({ t: q[1] || q[0], k: 'm', x: sy.x, i: 1 });
+  }
+  return out;
+}
+function renderFocus(id) {
+  gFocus.replaceChildren(); focusEdges = []; focusChips = [];
+  const u = U.get(id); if (!u) return;
+  const detail = !!ST.detail;
+  const score = (f) => f.out.reduce((a, x) => a + x[1], 0) + f.in.reduce((a, x) => a + x[1], 0);
+  const files = u.files.slice().sort((a, b) => score(b) - score(a) || b.loc - a.loc);
+  const MAX = detail ? 30 : 44, shown = files.slice(0, MAX), hiddenN = u.fileCount - shown.length;
+  const n = shown.length, W1 = detail ? 280 : CW;
+  const fc = detail ? (n <= 3 ? 1 : n <= 10 ? 2 : 3) : (n <= 4 ? 1 : n <= 14 ? 2 : n <= 30 ? 3 : 4);
+  // Karten bzw. Chips mit Höhen, spaltenweise nach kürzester Spalte gestapelt
+  const items = shown.map((f) => {
+    if (!detail) return { f, w: W1, h: CH };
+    let lines = cardLines(u, f); const total = lines.length; lines = lines.slice(0, 12);
+    if (!lines.length) lines = [{ t: f.sym && f.sym.length === 0 ? '(keine Funktionen erkannt)' : '', k: 'm', x: 0, i: 0 }];
+    return { f, w: W1, lines, more: total - lines.length, h: 32 + lines.length * 14 + (total > 12 ? 14 : 0) + 6 };
+  });
+  const colH = new Array(fc).fill(0);
+  for (const it of items) { let c = 0; for (let i = 1; i < fc; i++) if (colH[i] < colH[c]) c = i; it.c = c; it.ry = colH[c]; colH[c] += it.h + CG; }
+  const boxW = fc * W1 + (fc - 1) * CG + 32, boxH = 54 + Math.max(0, ...colH) + (hiddenN > 0 ? 26 : 6);
+  const x0 = -boxW / 2, y0 = -boxH / 2;
+  const gB = el('g', { style: `--h:${u.hue}` }, gFocus), gE = el('g', {}, gFocus), gC = el('g', { style: `--h:${u.hue}` }, gFocus), gN = el('g', {}, gFocus);
+  el('rect', { class: 'box', x: x0, y: y0, width: boxW, height: boxH, rx: 14 }, gB);
+  el('text', { class: 'boxlabel', x: x0 + 16, y: y0 + 26 }, gB).textContent = u.label;
+  el('text', { class: 'boxsub', x: x0 + 16, y: y0 + 43 }, gB).textContent = `${RL[u.role]} · ${fmt(u.fileCount)} Dateien · ${fmt(u.loc)} Zeilen${detail ? ' · Funktionen sichtbar' : ' · weiter hineinzoomen zeigt Funktionen'}`;
+  const nb = new Map();
+  for (const x of u.usedBy) nb.set(x.id, { id: x.id, inn: x.count, out: 0 });
+  for (const x of u.uses) { const o = nb.get(x.id) || { id: x.id, inn: 0, out: 0 }; o.out = x.count; nb.set(x.id, o); }
+  const L = [], R = [];
+  for (const o of nb.values()) (o.inn >= o.out && o.inn > 0 ? L : R).push(o);
+  const cap = 14, tot = (o) => o.inn + o.out;
+  const keep = (a) => a.sort((p, q) => tot(q) - tot(p)).slice(0, cap);
+  const Ls = keep(L), Rs = keep(R);
+  const colX = (side) => (side === 'L' ? x0 - 120 - NW / 2 : x0 + boxW + 120 + NW / 2);
+  const npos = new Map();
+  const stack = (arr, side) => { const H = stackH(arr.length, NH); arr.forEach((o, i) => npos.set(o.id, { x: colX(side), y: -H / 2 + NH / 2 + i * (NH + GY), w: NW, h: NH, side })); };
+  stack(Ls, 'L'); stack(Rs, 'R');
+  const nbCls = (id2) => { const a = EK.get(id2 + '>' + u.id), b = EK.get(u.id + '>' + id2); return [a, b].find((e) => e && (e.cls === 'violation' || e.cls === 'warn')) || a || b; };
+  const chipPos = new Map();
+  for (const it of items) {
+    const f = it.f, px = x0 + 16 + it.c * (W1 + CG), py = y0 + 54 + it.ry;
+    chipPos.set(f.path, { x: px, y: py, w: it.w, h: it.h });
+    const linked = f.out.length || f.in.length;
+    const g = el('g', { class: detail ? 'card' : `chip-f ${linked ? 'ext' : 'internal'}`, tabindex: 0, role: 'button', 'data-f': f.path, style: `--h:${u.hue}` }, gC);
+    el('rect', { class: 'shape', x: px, y: py, width: it.w, height: it.h, rx: 6, ...(detail && !linked ? { 'stroke-dasharray': '3 3' } : {}) }, g);
+    if (!detail) {
+      el('text', { x: px + 9, y: py + 19 }, g).textContent = trunc(base(f.path), CW - 56, 11.5, true);
+      el('text', { class: 'l', x: px + CW - 8, y: py + 19, 'text-anchor': 'end' }, g).textContent = f.loc;
+    } else {
+      el('text', { class: 'ch', x: px + 9, y: py + 19 }, g).textContent = trunc(base(f.path), it.w - 70, 12, true);
+      el('text', { class: 'cl cn', x: px + it.w - 8, y: py + 19, 'text-anchor': 'end' }, g).textContent = f.loc;
+      it.lines.forEach((ln, i) => {
+        const ty = py + 36 + i * 14, ix = ln.i ? 14 : 0;
+        const t = el('text', { class: `cl ${ln.k === 'm' ? 'cm' : ''}`, x: px + 24 + ix, y: ty, opacity: ln.x || ln.k === 'm' ? 1 : 0.55 }, g); t.textContent = trunc(ln.t, it.w - 34 - ix, 10.5, true);
+        if (ln.k !== 'm') el('text', { class: 'cg', x: px + 9 + ix, y: ty, style: 'font-size:10.5px' }, g).textContent = GL[ln.k] || '·';
+      });
+      if (it.more > 0) el('text', { class: 'cl cn', x: px + 9, y: py + it.h - 6 }, g).textContent = `+ ${it.more} weitere Zeilen`;
+    }
+    el('title', {}, g).textContent = `${f.path}\n${f.loc} Zeilen${f.doc ? '\n' + f.doc : ''}`;
+    g.addEventListener('click', (e) => { e.stopPropagation(); selectFile(f.path); });
+    g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectFile(f.path); } });
+    g.addEventListener('mouseenter', () => focusPaint(f.path, null)); g.addEventListener('mouseleave', () => focusPaint(null, null));
+    focusChips.push({ g, f });
+  }
+  if (hiddenN > 0) el('text', { class: 'more', x: x0 + 16, y: y0 + boxH - 10 }, gB).textContent = `+ ${hiddenN} weitere Dateien (Liste rechts)`;
+  for (const [id2, p] of npos) {
+    const nu = U.get(id2);
+    const g = drawNode(nu, p, gN, (x) => open(x.id));
+    g.addEventListener('mouseenter', () => focusPaint(null, id2)); g.addEventListener('mouseleave', () => focusPaint(null, null));
+    focusChips.push({ g, unit: id2 });
+  }
+  const add = (f, other, count, dirOut) => {
+    const q = npos.get(other), cp = chipPos.get(f.path); if (!q || !cp) return;
+    const chipSide = q.side === 'L' ? [cp.x, cp.y + 15] : [cp.x + cp.w, cp.y + 15];
+    const nodeSide = q.side === 'L' ? [q.x + q.w / 2, q.y] : [q.x - q.w / 2, q.y];
+    const [s0, t0] = dirOut ? [chipSide, nodeSide] : [nodeSide, chipSide];
+    const ec = nbCls(other); const cls = ec && ec.cls === 'violation' ? 'bad' : ec && ec.cls === 'warn' ? 'warn' : '';
+    const bw = 0.9 + Math.log2(count) * 0.45;
+    const path = el('path', { class: `edge ${cls}`, d: curve(s0, t0, 'h'), 'stroke-width': bw.toFixed(2), opacity: 0.55, 'marker-end': `url(#ah-${cls || 'ok'})` }, gE);
+    el('title', {}, path).textContent = dirOut ? `${base(f.path)} → ${name(other)}: ${count}×` : `${name(other)} → ${base(f.path)}: ${count}×`;
+    focusEdges.push({ path, f: f.path, u: other, bw });
+  };
+  for (const it of items) { for (const [o, c] of it.f.in) add(it.f, o, c, false); for (const [o, c] of it.f.out) add(it.f, o, c, true); }
+  const more = (nb.size - Ls.length - Rs.length);
+  if (more > 0) el('text', { class: 'more', x: 0, y: boxH / 2 + 34, 'text-anchor': 'middle' }, gN).textContent = `… und ${more} weitere Nachbarn (siehe Liste rechts)`;
+  const lab = (txt, side) => el('text', { class: 'band', x: colX(side), y: -Math.max(stackH((side === 'L' ? Ls : Rs).length, NH) / 2, 20) - 18, 'text-anchor': 'middle' }, gN).textContent = txt;
+  lab('nutzen dieses Modul', 'L'); lab('werden von diesem Modul genutzt', 'R');
+}
+function focusPaint(file, unit) {
+  const f = file || ST.file; const hl = (file || unit) ? { file, unit } : (ST.file ? { file: ST.file } : null);
+  for (const e of focusEdges) {
+    const on = !hl || (hl.file && e.f === hl.file) || (hl.unit && e.u === hl.unit);
+    e.path.classList.toggle('dim', !on); e.path.style.strokeWidth = on && hl ? e.bw * 1.6 : '';
+    if (on && hl) gFocus.querySelector('g:nth-child(2)').appendChild(e.path);
+  }
+  const keepUnits = hl ? new Set(focusEdges.filter((e) => (hl.file && e.f === hl.file) || (hl.unit && e.u === hl.unit)).map((e) => e.u)) : null;
+  for (const c of focusChips) {
+    if (c.f) { const on = !hl || (hl.file === c.f.path) || (hl.unit && focusEdges.some((e) => e.f === c.f.path && e.u === hl.unit)); c.g.classList.toggle('dim', !on); c.g.classList.toggle('sel', c.f.path === ST.file); }
+    else { const on = !hl || (keepUnits && keepUnits.has(c.unit)) || hl.unit === c.unit; c.g.classList.toggle('dim', !on); }
+  }
+}
+
+// ---------- Ansicht: Zoom und Verschieben ----------
+const ptrs = new Map();
+let bounds = { x: 0, y: 0, w: 1, h: 1 }, vb = { x: 0, y: 0, w: 1, h: 1 };
+const activeG = () => (ST.view === 'focus' ? gFocus : gOver);
+function applyVB() { svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
+function fit() {
+  let bb; try { bb = activeG().getBBox(); } catch { bb = { x: -400, y: -300, width: 800, height: 600 }; }
+  bounds = { x: bb.x - 60, y: bb.y - 40, w: bb.width + 120, h: bb.height + 80 };
+  const r = svg.getBoundingClientRect(); const ar = r.width / Math.max(1, r.height);
+  let w = bounds.w, h = bounds.h; if (w / h < ar) w = h * ar; else h = w / ar;
+  vb = { x: bounds.x - (w - bounds.w) / 2, y: bounds.y - (h - bounds.h) / 2, w, h }; applyVB();
+}
+function zoom(f, cxv, cyv) {
+  const px = cxv ?? vb.x + vb.w / 2, py = cyv ?? vb.y + vb.h / 2;
+  const nw = Math.min(bounds.w * 4, Math.max(bounds.w / 12, vb.w / f)), nh = nw * (vb.h / vb.w);
+  vb = { x: px - ((px - vb.x) / vb.w) * nw, y: py - ((py - vb.y) / vb.h) * nh, w: nw, h: nh }; applyVB();
+  autoLevel(px, py);
+}
+// Landkarten-Zoom: weit hinein öffnet das Modul, weiter hinein zeigt Funktionen, hinaus geht zurück
+let cool = 0;
+function unitAtPoint(mx, my) {
+  let best = null, bd = 1e9;
+  for (const [id, p] of pos) { const dx = Math.max(Math.abs(mx - p.x) - p.w / 2, 0), dy = Math.max(Math.abs(my - p.y) - p.h / 2, 0), d = Math.hypot(dx, dy); if (d < bd) { bd = d; best = id; } }
+  return bd < 40 ? best : null;
+}
+function reflow() { renderFocus(ST.sel); focusPaint(null, null); const bb = gFocus.getBBox(); bounds = { x: bb.x - 60, y: bb.y - 40, w: bb.width + 120, h: bb.height + 80 }; $('#tSym').checked = ST.detail; }
+function autoLevel(mx, my) {
+  if (Date.now() - cool < 600 || ptrs.size > 2) return;
+  const scale = bounds.w / vb.w;
+  if (ST.view === 'map') { if (scale > 2.8) { const id = unitAtPoint(mx, my); if (id) { cool = Date.now(); open(id); } } return; }
+  if (scale < 0.5) { cool = Date.now(); back(); return; }
+  if (!ST.detail && scale > 2.6) { cool = Date.now(); ST.detail = true; reflow(); }
+  else if (ST.detail && scale < 1.4) { cool = Date.now(); ST.detail = false; reflow(); }
+}
+let drag = null, pinch = null, moved = false;
+const toSvg = (a, b) => { const r = svg.getBoundingClientRect(); return [vb.x + ((a - r.left) / r.width) * vb.w, vb.y + ((b - r.top) / r.height) * vb.h]; };
+svg.addEventListener('pointerdown', (e) => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false; if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, vb: { ...vb } }; if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), vb: { ...vb } }; drag = null; } });
+svg.addEventListener('pointermove', (e) => {
+  if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); const [mx, my] = toSvg((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); vb = { ...pinch.vb }; zoom(d / pinch.d, mx, my); moved = true; return; }
+  if (drag) { const r = svg.getBoundingClientRect(); const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; vb = { ...drag.vb, x: drag.vb.x - (dx / r.width) * drag.vb.w, y: drag.vb.y - (dy / r.height) * drag.vb.h }; applyVB(); }
+});
+const up = (e) => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) drag = null; };
+svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+svg.addEventListener('wheel', (e) => { e.preventDefault(); const [mx, my] = toSvg(e.clientX, e.clientY); zoom(Math.exp(-Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) / 260), mx, my); }, { passive: false });
+svg.addEventListener('dblclick', (e) => { e.preventDefault(); const [mx, my] = toSvg(e.clientX, e.clientY); if (ST.view === 'map') { const id = unitAtPoint(mx, my); if (id) { const p = pos.get(id); if (Math.abs(mx - p.x) <= p.w / 2 && Math.abs(my - p.y) <= p.h / 2) { open(id); return; } } } zoom(1.8, mx, my); });
+svg.addEventListener('contextmenu', (e) => { e.preventDefault(); if (ST.file) selectFile(null); else if (ST.view === 'focus') back(); else if (ST.sel) select(null); else fit(); });
+svg.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
+svg.addEventListener('auxclick', (e) => { if (e.button === 1) { e.preventDefault(); fit(); } });
+svg.addEventListener('click', () => { if (moved) return; if (ST.view === 'focus') selectFile(null); else select(null); });
+$('#zin').onclick = () => zoom(1.3); $('#zout').onclick = () => zoom(1 / 1.3); $('#zfit').onclick = fit;
+window.onresize = () => { if (!ptrs.size) fit(); };
+
+// ---------- Auswahl, Hervorhebung, Filter ----------
+let hov = null;
+const neighbors = (id) => { const s = new Set([id]); for (const e of D.edges) { if (e.from === id) s.add(e.to); if (e.to === id) s.add(e.from); } return s; };
+function paint() {
+  if (ST.view === 'focus') { focusPaint(null, null); return; }
+  const focus = hov || ST.sel;
+  const nb = focus ? neighbors(focus) : null;
+  const q = ST.query.trim().toLowerCase();
+  const issuesOnly = $('#tIssues').checked, wiring = $('#tWiring').checked;
+  const issueIds = new Set(D.issues.flatMap((i) => [i.from, i.to]));
+  for (const [id, n] of nodeEls) {
+    const u = U.get(id);
+    const matches = q && (u.label.toLowerCase().includes(q) || u.files.some((f) => f.path.toLowerCase().includes(q)));
+    n.classList.toggle('dim', !!((nb && !nb.has(id)) || (q && !matches) || (issuesOnly && !issueIds.has(id))));
+    n.classList.toggle('sel', id === ST.sel); n.classList.toggle('hit', !!matches);
+  }
+  for (const ed of edgeEls) {
+    const { e, path, bw } = ed;
+    const connected = focus && (e.from === focus || e.to === focus);
+    const hidden = (e.cls === 'wiring' && !wiring && !connected) || (issuesOnly && !(e.cls === 'warn' || e.cls === 'violation'));
+    path.style.display = hidden ? 'none' : '';
+    path.classList.toggle('dim', !!focus && !connected);
+    path.style.opacity = connected ? 1 : '';
+    path.style.strokeWidth = connected ? (bw * 1.7).toFixed(2) : '';
+    if (connected) gEdges.appendChild(path);
+  }
+  for (const { c, u, t } of dotEls) c.style.opacity = focus ? (focus === u || focus === t ? 1 : 0.1) : 1;
+  gTop.querySelectorAll('.ecount').forEach((x) => x.remove());
+  if (focus) for (const { e, mid } of edgeEls) if ((e.from === focus || e.to === focus) && e.cls !== 'wiring') { const t = el('text', { class: 'ecount', x: mid[0], y: mid[1] + 3, 'text-anchor': 'middle' }, gTop); t.textContent = e.count; }
+}
+function hover(id) { hov = id; paint(); }
+function setView(v) {
+  ST.view = v;
+  gOver.style.display = v === 'focus' ? 'none' : '';
+  gFocus.style.display = v === 'focus' ? '' : 'none';
+  $('#inner').hidden = !(v === 'map' && ST.sel && U.get(ST.sel).files.length);
+  $('#back').hidden = v !== 'focus';
+  $('#symlab').hidden = v !== 'focus'; $('#tSym').checked = ST.detail;
+  crumb();
+  document.querySelectorAll('#tWiring, #tIssues, #q').forEach((x) => { x.disabled = v === 'focus'; });
+}
+function select(id) { ST.sel = id; ST.file = null; crumb(); if (api.onSelection) setTimeout(api.onSelection, 0); if (ST.view === 'focus') setView('map'); setView('map'); paint(); renderPanel(); if (id && window.innerWidth < 960) $('#panel').scrollIntoView({ block: 'nearest' }); }
+function open(id, file) {
+  if (!U.has(id)) return;
+  ST.sel = id; ST.file = file || null; if (api.onSelection) setTimeout(api.onSelection, 0); renderFocus(id); setView('focus'); fit(); focusPaint(null, null); renderPanel();
+}
+function selectFile(path) { ST.file = path; crumb(); if (api.onSelection) setTimeout(api.onSelection, 0); if (ST.view !== 'focus') { open(ST.sel, path); return; } focusPaint(null, null); renderPanel(); }
+function levelUp() { if (ST.file) selectFile(null); else if (ST.view === 'focus') back(); else if (ST.sel) select(null); }
+function crumb() {
+  const c = $('#crumb'); const lvl = ST.file ? 3 : ST.view === 'focus' ? 2 : ST.sel ? 1 : 0;
+  c.hidden = lvl === 0; if (!lvl) return; c.textContent = '';
+  const b = (t, f, cls) => { const x = document.createElement('button'); x.textContent = t; if (cls) x.className = cls; x.onclick = f; c.appendChild(x); };
+  const sp = (t) => { const x = document.createElement('span'); x.className = 'cur'; x.textContent = t; c.appendChild(x); };
+  b('↑ Eine Ebene höher', levelUp, 'back'); b('Übersicht', () => select(null));
+  const u = U.get(ST.sel); sp('›');
+  if (lvl >= 2) { b(u.label, () => { if (ST.file) selectFile(null); else if (ST.view !== 'focus') open(ST.sel); }); } else sp(u.label);
+  if (ST.file) { sp('›'); sp(ST.file.split('/').pop()); }
+}
+function back() { ST.file = null; setView('map'); fit(); paint(); renderPanel(); }
+$('#inner').onclick = () => open(ST.sel);
+$('#back').onclick = back;
+['#tWiring', '#tIssues'].forEach((s) => ($(s).onchange = paint));
+$('#tSym').onchange = (e) => { ST.detail = e.target.checked; if (ST.view === 'focus') { renderFocus(ST.sel); setView('focus'); fit(); focusPaint(null, null); } };
+$('#q').oninput = (e) => { ST.query = e.target.value; paint(); };
+$('#q').onkeydown = (e) => { if (e.key === 'Enter') { const q = ST.query.trim().toLowerCase(); const u = D.units.find((x) => x.label.toLowerCase().includes(q) || x.files.some((f) => f.path.toLowerCase().includes(q))); if (u) select(u.id); } };
+window.onkeydown = (e) => { if (e.key === 'Escape') levelUp(); };
+
+// ---------- Texte ----------
+const list = (arr, max = 6) => { const a = arr.slice(0, max).map((u) => name(u.id)); return a.join(', ') + (arr.length > max ? ` und ${arr.length - max} weitere` : ''); };
+const ROLETEXT = {
+  entrypoint: 'Hier kommt etwas von außen an (Anfrage, Aufruf, Oberfläche) und wird an die Fachlogik weitergereicht.',
+  core: 'Fachlogik: hier steckt die eigentliche Bedeutung und die Regeln dieses Themas, unabhängig von Technik.',
+  port: 'Ein Vertrag an der Grenze der Fachlogik: er beschreibt, was die Fachlogik von außen braucht oder anbietet, ohne die Technik zu kennen.',
+  adapter: 'Verbindet das System mit einem Programm oder Dienst außerhalb und setzt die Verträge der Fachlogik technisch um.',
+  orchestration: 'Steuert Abläufe über Zeit: Schritte, Wartezeiten und Wiederholungen. Die Fachregeln selbst stehen woanders.',
+  runtime: 'Startet das System und verdrahtet die Teile miteinander. Deshalb sieht es fast alles andere.',
+  crosscut: 'Wird quer durch das ganze System gebraucht und ist deshalb nicht als Linie, sondern als farbiger Punkt an den Nutzern gezeichnet.',
+  shared: 'Gemeinsame Hilfen, die mehrere Bausteine nutzen.',
+  unknown: 'Ein Baustein ohne erkennbare Architekturrolle.',
+};
+function sentence(u) {
+  const uses = u.uses.filter((x) => x.cls !== 'cross').map((x) => U.get(x.id)).filter(Boolean);
+  const who = u.usedBy.map((x) => U.get(x.id)).filter(Boolean);
+  let s = ROLETEXT[u.role] + ' ';
+  s += who.length ? `Er wird von ${list(who)} genutzt. ` : 'Niemand im Code ruft ihn direkt auf. ';
+  if (uses.length) s += `Er selbst nutzt ${list(uses)}.`;
+  return s;
+}
+function renderIntro() {
+  const p = D.project;
+  const hasArch = D.units.some((u) => u.role === 'core' || u.role === 'port' || u.role === 'adapter');
+  const nCore = D.units.filter((u) => u.role === 'core').length;
+  const ents = ent.length ? `${ent.length} ${ent.length === 1 ? 'Eingang' : 'Eingänge'} (${list(ent, 4)})` : '';
+  const cs = hasArch ? `${nCore} Fachmodul${nCore === 1 ? '' : 'e'} (${list(core.filter((u) => u.role === 'core'), 7)})` : `${core.length} Bausteine (${list(core, 7)})`;
+  const ad = adp.length ? `${adp.length} Adapter zu ${list(adp, 8)}` : '';
+  const ps = D.units.filter((u) => u.role === 'port').length;
+  let html = !hasArch ? `<p><b>So liest du das Bild.</b> In diesem Projekt ist keine Aufteilung in Fachlogik, Ports und Adapter zu erkennen. Deshalb stehen die Bausteine nach Ordnern gruppiert in der Mitte, Eingänge links und Start unten. Eine Linie heißt: „nutzt“. Dickere Linie = mehr Verweise.</p>`
+    : `<p><b>So liest du das Bild.</b> Von links nach rechts: ${ent.length ? 'links kommt etwas an, ' : ''}in der Mitte liegt die Fachlogik, rechts spricht das System mit der Außenwelt. Der Rand des Sechsecks ist die Grenze der Fachlogik, dort sitzen die <b>Ports</b> (Verträge). Alles, was weiter außen steht, sind <b>Adapter</b>, die diese Verträge technisch erfüllen. Eine Linie heißt: „nutzt“. Dickere Linie = mehr Verweise. <b>Klick auf einen Baustein</b> blendet alles andere aus, <b>Innenansicht</b> zeigt seine Dateien.</p>`;
+  html += `<p>Gefunden: ${[ents, cs, ps ? `${ps} Port-Bausteine` : '', ad, orch.length ? `Ablaufsteuerung (${list(orch)})` : ''].filter(Boolean).join('; ')}.</p>`;
+  const bad = D.issues.filter((i) => i.cls === 'violation').length, warn = D.issues.filter((i) => i.cls === 'warn').length;
+  html += `<p>${bad ? `<b class="bad-t">${bad} Regelverstöße</b> (rot): Die Fachlogik greift nach außen. ` : 'Keine Regelverstöße: Die Fachlogik greift nirgends nach außen. '}${warn ? `<b class="warn-t">${warn} Hinweise</b> (orange): Kopplungen, die man prüfen sollte.` : ''}</p>`;
+  for (const c of crs) {
+    const users = new Set(c.usedBy.map((x) => x.id));
+    const missing = D.units.filter((u) => ['core', 'adapter', 'entrypoint', 'orchestration'].includes(u.role) && !users.has(u.id));
+    html += `<p><b>${esc(c.label)}</b> wird von ${users.size} Bausteinen genutzt (Punkte an den Bausteinen).${missing.length ? ` Noch nicht angebunden: ${esc(list(missing, 10))}.` : ' Alle Fachmodule, Adapter und Eingänge sind angebunden.'}</p>`;
+  }
+  $('#intro').innerHTML = html;
+}
+const symRow = (f, sy, dim) => {
+  const mem = sy.m || [];
+  const head = `<span class="g">${GL[sy.k] || '·'}</span> <b>${esc(sy.n)}</b>${sy.s ? ` <span class="ftag">${esc(sy.s)}</span>` : ''} <span class="n">${esc(base(f.path))}:${sy.l}</span>`;
+  return mem.length ? `<details class="sym${dim && !sy.x ? ' dimmed' : ''}"><summary>${head}</summary><ul class="mem">${mem.map((q) => `<li>${esc(q[1] || q[0])}</li>`).join('')}</ul></details>` : `<div class="sym${dim && !sy.x ? ' dimmed' : ''}">${head}</div>`;
+};
+function schemaSection(u) {
+  const all = [];
+  for (const f of u.files) for (const sy of f.sym || []) if (sy.x) all.push([f, sy]);
+  const types = all.filter(([, sy]) => ['iface', 'type', 'schema', 'enum', 'class'].includes(sy.k)).slice(0, 36);
+  const fns = all.filter(([, sy]) => sy.k === 'fn').slice(0, 18);
+  let h = '';
+  if (u.role === 'adapter') {
+    const ports = u.uses.filter((x) => U.get(x.id) && U.get(x.id).role === 'port');
+    if (ports.length) h += `<h4>Setzt diese Verträge um</h4><ul class="list">${ports.map((x) => `<li><button data-id="${esc(x.id)}">${esc(name(x.id))}</button><span class="n">${x.count}×</span></li>`).join('')}</ul>`;
+  }
+  if (!types.length && !fns.length) return h;
+  const title = u.role === 'port' ? 'Schnittstelle (Schema)' : u.role === 'adapter' ? 'Was dieser Adapter anbietet' : 'Öffentliche Typen und Funktionen';
+  h += `<h4>${title}</h4>${types.map(([f, sy]) => symRow(f, sy)).join('')}`;
+  if (fns.length) h += `<details ${types.length ? '' : 'open'}><summary class="ftag">${fns.length} Funktionen</summary>${fns.map(([f, sy]) => symRow(f, sy)).join('')}</details>`;
+  return h;
+}
+const tags = (arr) => arr.map(([id, c]) => `${esc(name(id))}${c > 1 ? ' ×' + c : ''}`).join(', ');
+function filePanel(u, f) {
+  let h = `<p><button data-act="back">← alle Dateien von ${esc(u.label)}</button></p><h3 class="mono" style="font-size:14px">${esc(f.path)}</h3><span class="role">${fmt(f.loc)} Zeilen</span>`;
+  if (f.doc) h += `<p class="note">${esc(f.doc)}</p>`;
+  h += `<h4>Nutzt (${f.out.length})</h4>${f.out.length ? '<ul class="list">' + f.out.map(([id, c]) => `<li><button data-id="${esc(id)}">${esc(name(id))}</button><span class="n">${c}×</span></li>`).join('') + '</ul>' : '<p>Nichts außerhalb dieses Bausteins.</p>'}`;
+  h += `<h4>Wird genutzt von (${f.in.length})</h4>${f.in.length ? '<ul class="list">' + f.in.map(([id, c]) => `<li><button data-id="${esc(id)}">${esc(name(id))}</button><span class="n">${c}×</span></li>`).join('') + '</ul>' : '<p>Von keinem anderen Baustein.</p>'}`;
+  if (f.ext.length) h += `<h4>Externe Bibliotheken</h4><p class="mono">${esc(f.ext.join(', '))}</p>`;
+  if ((f.sym || []).length) h += `<h4>Funktionen und Typen (${f.sym.length})</h4>${f.sym.map((sy) => symRow(f, sy, true)).join('')}`;
+  if (f.int) h += `<p class="ftag">${f.int} Verweise innerhalb desselben Bausteins</p>`;
+  return h;
+}
+function renderPanel() {
+  const P = $('#panel');
+  const u = ST.sel ? U.get(ST.sel) : null;
+  if (!u) {
+    const iss = D.issues.slice().sort((a, b) => (a.cls === b.cls ? b.count - a.count : a.cls === 'violation' ? -1 : 1));
+    let h = '<h3>Überblick</h3><p>Klick auf einen Baustein zeigt, was er ist, wen er nutzt und wer ihn nutzt. „Innenansicht“ öffnet seine Dateien.</p>';
+    h += '<h4>Hinweise und Verstöße</h4>';
+    h += iss.length ? '<ul class="list">' + iss.slice(0, 40).map((i) => `<li><span><button data-id="${esc(i.from)}">${esc(name(i.from))}</button> → ${esc(name(i.to))}<br><span class="${i.cls === 'violation' ? 'bad-t' : 'warn-t'}">${esc(i.why)}</span></span><span class="n">${i.count}×</span></li>`).join('') + '</ul>' : '<p>Keine.</p>';
+    h += '<h4>Alle Bausteine</h4><ul class="list">' + D.units.map((x) => `<li><button data-id="${esc(x.id)}">${esc(name(x.id))}</button><span class="n">${esc(RL[x.role])}</span></li>`).join('') + '</ul>';
+    P.innerHTML = h;
+  } else {
+    const f = ST.file ? u.files.find((x) => x.path === ST.file) : null;
+    const mine = D.issues.filter((i) => i.from === ST.sel || i.to === ST.sel);
+    let h = f ? filePanel(u, f) + '<hr>' : '';
+    h += `<h3>${esc(u.label)}</h3><span class="role">${esc(RL[u.role])}</span>${u.project ? ` <span class="mono">${esc(u.project)}</span>` : ''}`;
+    if (ST.view === 'map' && u.files.length) h += ` <button data-act="inner">Innenansicht</button>`;
+    h += `<p>${esc(sentence(u))}</p>`;
+    if (u.doc) h += `<p class="note">${esc(u.doc)}</p>`;
+    if (u.role === 'crosscut') {
+      const users = new Set(u.usedBy.map((x) => x.id));
+      const miss = D.units.filter((x) => ['core', 'adapter', 'entrypoint', 'orchestration'].includes(x.role) && !users.has(x.id));
+      h += `<p>Genutzt von <b>${users.size}</b> Bausteinen.${miss.length ? ` Nicht angebunden: <b>${esc(list(miss, 12))}</b>.` : ''}</p>`;
+    }
+    for (const i of mine) h += `<p class="note ${i.cls === 'violation' ? 'bad' : 'warn'}"><b>${i.cls === 'violation' ? 'Regelverstoß' : 'Hinweis'}:</b> ${esc(name(i.from))} → ${esc(name(i.to))}: ${esc(i.why)}.<br><span class="mono">${esc(i.samples.map((s) => `${s.from}:${s.line}`).join('  '))}</span></p>`;
+    const li = (arr) => '<ul class="list">' + arr.map((x) => `<li><button data-id="${esc(x.id)}">${esc(name(x.id))}</button><span class="n">${x.count}×</span></li>`).join('') + '</ul>';
+    const schema = schemaSection(u);
+    if (u.role === 'port' || u.role === 'adapter') h += schema;
+    h += `<h4>Nutzt (${u.uses.length})</h4>${u.uses.length ? li(u.uses) : '<p>nichts</p>'}`;
+    h += `<h4>Wird genutzt von (${u.usedBy.length})</h4>${u.usedBy.length ? li(u.usedBy) : '<p>niemand</p>'}`;
+    if (u.ext.length) h += `<h4>Externe Bibliotheken</h4><p class="mono">${esc(u.ext.map(([n, c]) => `${n} (${c})`).join(', '))}</p>`;
+    if (u.role !== 'port' && u.role !== 'adapter') h += schema;
+    const row = (x) => `<div class="frow${x.path === ST.file ? ' sel' : ''}" data-f="${esc(x.path)}"><span class="mono">${esc(x.path)}</span> <span class="n">${x.loc}</span>${x.out.length ? `<div class="ftag">→ ${tags(x.out.slice(0, 4))}</div>` : ''}${x.in.length ? `<div class="ftag">← ${tags(x.in.slice(0, 4))}</div>` : ''}${x.doc ? `<div class="ftag">${esc(x.doc)}</div>` : ''}</div>`;
+    h += `<h4>Dateien (${fmt(u.fileCount)}, ${fmt(u.loc)} Zeilen)</h4>${u.files.slice(0, 25).map(row).join('')}`;
+    if (u.files.length > 25) h += `<details><summary>${u.files.length - 25} weitere</summary>${u.files.slice(25).map(row).join('')}</details>`;
+    P.innerHTML = h;
+  }
+  P.querySelectorAll('button[data-id]').forEach((b) => (b.onclick = () => (ST.view === 'focus' ? open(b.dataset.id) : select(b.dataset.id))));
+  P.querySelectorAll('[data-act="inner"]').forEach((b) => (b.onclick = () => open(ST.sel)));
+  P.querySelectorAll('[data-act="back"]').forEach((b) => (b.onclick = () => selectFile(null)));
+  P.querySelectorAll('.frow').forEach((r) => (r.onclick = () => selectFile(r.dataset.f)));
+  P.scrollTop = 0;
+}
+function renderHeader() {
+  $('#title').textContent = D.project.name;
+  const s = D.stats, bad = D.issues.filter((i) => i.cls === 'violation').length, warn = D.issues.filter((i) => i.cls === 'warn').length;
+  const langs = Object.entries(D.project.langs).map(([k, v]) => `${LN[k] || k} ${v}`).join(', ');
+  $('#chips').innerHTML = `<span class="chip"><b>${fmt(s.files)}</b> Dateien</span><span class="chip"><b>${fmt(s.loc)}</b> Zeilen</span><span class="chip"><b>${s.units}</b> Bausteine</span><span class="chip"><b>${fmt(s.fileEdges)}</b> Verweise</span>` +
+    `<span class="chip ${bad ? 'bad' : ''}"><b>${bad}</b> Verstöße</span><span class="chip ${warn ? 'warn' : ''}"><b>${warn}</b> Hinweise</span><span class="chip">${esc(langs)}</span>`;
+  $('#legend').innerHTML = '<span><i class="sw"></i> nutzt</span><span><i class="sw warn"></i> Hinweis</span><span><i class="sw bad"></i> Regelverstoß</span><span><i class="dotsw"></i> Punkt am Baustein = nutzt einen Querschnittsbaustein (z. B. Fehlerbehandlung)</span><span>Farbe = Fachmodul, Port und Adapter eines Moduls teilen den Ton</span><span>Mausrad = zoomen (weit hinein öffnet das Modul, noch weiter zeigt Funktionen), ziehen = verschieben, Doppelklick = öffnen, Rechtsklick oder Esc = zurück, Mitteltaste = alles</span>';
+}
+renderHeader(); renderIntro();
+if (ST.sel && ST.view === 'focus') { renderFocus(ST.sel); setView('focus'); } else setView('map');
+renderPanel(); fit(); paint(); if (ST.view === 'focus') focusPaint(null, null);
+if (!D.units.length) $('.map').innerHTML = '<div class="empty">Keine Quelldateien gefunden.</div>';
+api = { select, open, fit, project: D.project, data: D, ST };
+}
+
+boot(JSON.parse(document.getElementById('data').textContent));
+
+// ---------- Chat: Fragen zum Code (Claude über das eigene Konto des Betrachters, keine API-Schlüssel) ----------
+function initChat() {
+  const D = api.data, U = new Map(D.units.map((u) => [u.id, u]));
+  const $c = (id) => document.getElementById(id);
+  const esc2 = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const md = (t) => {
+    const lines = esc2(t).split('\n'); let html = '', inList = false;
+    const inl = (x) => x.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+    for (const ln of lines) {
+      const li = ln.match(/^\s*[-*]\s+(.*)$/);
+      if (li) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${inl(li[1])}</li>`; continue; }
+      if (inList) { html += '</ul>'; inList = false; }
+      if (ln.trim()) html += `<p>${inl(ln)}</p>`;
+    }
+    return html + (inList ? '</ul>' : '');
+  };
+  const rl = (u) => D.roleLabels[u.role];
+  const find = (q) => {
+    const k = String(q || '').trim().toLowerCase();
+    const exact = D.units.filter((u) => u.id.toLowerCase() === k || u.label.toLowerCase() === k || `${u.label} (${rl(u)})`.toLowerCase() === k);
+    if (exact.length) return exact;
+    return D.units.filter((u) => u.label.toLowerCase().includes(k));
+  };
+  const nm = (id) => (U.get(id) ? `${U.get(id).label} [${rl(U.get(id))}]` : id);
+  const symLine = (sy) => `${sy.k}${sy.x ? '' : ' (intern)'} ${sy.s && sy.k === 'fn' ? sy.s : sy.n}${sy.k !== 'fn' && sy.s ? ' ' + sy.s : ''} :${sy.l}`;
+  const tools = [
+    { name: 'get_unit', description: 'Gibt Details zu einem Baustein der Karte: Rolle, Beschreibung, wichtigste Dateien mit Funktionen, wen er nutzt, wer ihn nutzt, externe Bibliotheken, Hinweise. Parameter: unit = Name oder id des Bausteins (z. B. "Communication").', inputSchema: { type: 'object', properties: { unit: { type: 'string' } }, required: ['unit'] },
+      execute: ({ unit }) => {
+        const m = find(unit); if (!m.length) throw new Error('Kein Baustein gefunden: ' + unit);
+        const kk = String(unit).toLowerCase(), exact = m.filter((x) => x.id === unit || x.label.toLowerCase() === kk), pool = exact.length ? exact : m;
+        if (pool.length > 1) return { mehrdeutig: pool.slice(0, 8).map((x) => ({ id: x.id, name: x.label, rolle: rl(x) })), hinweis: 'Bitte mit der id erneut aufrufen.' };
+        const u = pool[0];
+        return { id: u.id, name: u.label, rolle: rl(u), beschreibung: u.doc, dateien: u.fileCount, zeilen: u.loc,
+          wichtigste_dateien: u.files.slice(0, 30).map((f) => ({ pfad: f.path, zeilen: f.loc, beschreibung: f.doc, symbole: (f.sym || []).filter((s2) => s2.x).slice(0, 6).map(symLine) })),
+          nutzt: u.uses.map((x) => ({ baustein: nm(x.id), verweise: x.count })), genutzt_von: u.usedBy.map((x) => ({ baustein: nm(x.id), verweise: x.count })),
+          externe_bibliotheken: u.ext.map((e) => e[0]), hinweise: D.issues.filter((i) => i.from === u.id || i.to === u.id).map((i) => `${nm(i.from)} -> ${nm(i.to)}: ${i.why} (${i.count}x, z. B. ${i.samples.map((s2) => s2.from + ':' + s2.line).join(', ')})`) };
+      } },
+    { name: 'get_file', description: 'Gibt Details zu einer Datei: Baustein, Zeilen, Funktionen/Typen/Schemas mit Signatur und Mitgliedern, welche anderen Bausteine sie nutzt und wer sie nutzt. Parameter: path = Dateipfad oder ein eindeutiger Teil davon.', inputSchema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
+      execute: ({ path }) => {
+        const k = String(path || '').toLowerCase(); const hits = [];
+        for (const u of D.units) for (const f of u.files) if (f.path.toLowerCase() === k || f.path.toLowerCase().endsWith('/' + k) || f.path.toLowerCase().includes(k)) hits.push([u, f]);
+        if (!hits.length) throw new Error('Keine Datei gefunden: ' + path);
+        if (hits.length > 1 && !hits.some(([, f]) => f.path.toLowerCase() === k)) return { mehrdeutig: hits.slice(0, 10).map(([u, f]) => f.path) };
+        const [u, f] = hits.find(([, x]) => x.path.toLowerCase() === k) || hits[0];
+        return { pfad: f.path, baustein: nm(u.id), zeilen: f.loc, beschreibung: f.doc, bibliotheken: f.ext, nutzt: f.out.map(([id, c]) => `${nm(id)} (${c}x)`), genutzt_von: f.in.map(([id, c]) => `${nm(id)} (${c}x)`),
+          symbole: (f.sym || []).slice(0, 30).map((sy) => ({ art: sy.k, name: sy.n, zeile: sy.l, signatur: sy.s, exportiert: !!sy.x, mitglieder: (sy.m || []).slice(0, 12).map((q) => q[1] || q[0]) })) };
+      } },
+    { name: 'find', description: 'Sucht einen Begriff in Bausteinnamen, Dateipfaden und Funktions-, Typ- und Schemanamen. Gibt bis zu 20 Treffer mit Fundort. Parameter: query.', inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+      execute: ({ query }) => {
+        const k = String(query || '').toLowerCase(); const out = [];
+        for (const u of D.units) {
+          if (u.label.toLowerCase().includes(k)) out.push({ art: 'Baustein', name: nm(u.id) });
+          for (const f of u.files) {
+            if (f.path.toLowerCase().includes(k)) out.push({ art: 'Datei', pfad: f.path, baustein: nm(u.id) });
+            for (const sy of f.sym || []) if (sy.n.toLowerCase().includes(k)) out.push({ art: sy.k, name: sy.n, pfad: f.path + ':' + sy.l, baustein: nm(u.id) });
+            if (out.length >= 20) return out;
+          }
+        }
+        return out;
+      } },
+    { name: 'get_issues', description: 'Gibt alle erkannten Regelverstöße (rot) und Hinweise (orange) mit Dateistellen zurück.', inputSchema: { type: 'object', properties: {} },
+      execute: () => D.issues.slice(0, 40).map((i) => ({ art: i.cls === 'violation' ? 'Regelverstoß' : 'Hinweis', von: nm(i.from), nach: nm(i.to), grund: i.why, verweise: i.count, stellen: i.samples.map((s2) => s2.from + ':' + s2.line) })) },
+  ];
+  const overview = () => {
+    const rank = (u) => u.uses.length + u.usedBy.length;
+    const list = D.units.slice().sort((a, b) => rank(b) - rank(a)).slice(0, 80).map((u) => `- ${u.label} [${rl(u)}], ${u.fileCount} Dateien, nutzt: ${u.uses.slice(0, 6).map((x) => U.get(x.id).label).join(', ') || '–'}; genutzt von: ${u.usedBy.slice(0, 6).map((x) => U.get(x.id).label).join(', ') || '–'}`);
+    const bad = D.issues.filter((i) => i.cls === 'violation').length, warn = D.issues.filter((i) => i.cls === 'warn').length;
+    return `Projekt „${D.project.name}“: ${D.stats.files} Dateien, ${D.stats.loc} Zeilen, ${D.stats.units} Bausteine, ${bad} Regelverstöße, ${warn} Hinweise.\nBausteine:\n${list.join('\n')}`;
+  };
+  const RULES = `Du erklärst einem Laien den Aufbau eines Softwareprojekts anhand einer automatisch erzeugten Architekturkarte. Du siehst nur Strukturdaten (Bausteine, Rollen, Verweise, Dateinamen, Funktionssignaturen, Kommentare am Dateianfang), keinen Quelltext. Schlage Details mit den Werkzeugen nach, statt zu raten. Wenn etwas aus den Daten nicht hervorgeht, sage das ausdrücklich. Nenne Bausteine und Dateien mit ihren Namen. Antworte kurz und in einfachem Deutsch; erkläre Fachbegriffe beim ersten Gebrauch. Begriffe: Fachmodul = Fachlogik eines Themas; Port = Vertrag an der Grenze der Fachlogik; Adapter = technische Anbindung nach außen; Eingang = hier kommt etwas von außen an; Querschnitt = wird überall gebraucht (z. B. Fehlerbehandlung). Rot = Regelverstoß (Fachlogik greift nach außen), orange = Hinweis.\n\n`;
+  const history = [];
+  let ctl = null, busy = false;
+  const ctxText = () => { const s0 = api.ST; const u = s0.sel && U.get(s0.sel); return u ? `Bezug: ${u.label}${s0.file ? ' · ' + s0.file.split('/').pop() : ''}` : 'Bezug: ganzes Projekt (Klick auf einen Baustein setzt den Bezug)'; };
+  const refreshCtx = () => {
+    $c('cctx').textContent = ctxText();
+    const u = api.ST.sel && U.get(api.ST.sel);
+    const sugg = [u ? `Was macht ${u.label}?` : 'Erkläre die Architektur in fünf Sätzen', u ? `Wo könnte bei ${u.label} etwas fehlen?` : 'Welche Hinweise sollte ich zuerst prüfen?', 'Wo ist die Fehlerbehandlung noch nicht angebunden?', 'Welche Module hängen am stärksten zusammen?'];
+    $c('csugg').innerHTML = sugg.map((t) => `<button type="button">${esc2(t)}</button>`).join('');
+    $c('csugg').querySelectorAll('button').forEach((b) => (b.onclick = () => { $c('cq').value = b.textContent; ask(); }));
+  };
+  const errText = (e) => ({ not_granted: 'Du hast die Nutzung von Claude für diese Seite nicht erlaubt. Der Chat ist hier aus.', sampling_disabled: 'Claude ist für dieses Konto nicht verfügbar.', rate_limited: e.reason === 'usage_limit' ? 'Dein Claude-Kontingent ist gerade aufgebraucht. Bitte später erneut fragen.' : 'Zu viele Anfragen kurz hintereinander. Bitte einen Moment warten.', session_expired: 'Bitte neu bei Claude anmelden und die Seite neu laden.', prompt_too_large: 'Die Frage samt Kontext ist zu groß.', refused: 'Claude hat diese Frage nicht beantwortet.', empty_completion: 'Claude hat keine Antwort geliefert. Bitte anders fragen.', upstream_error: 'Verbindungsproblem. Bitte erneut versuchen.' }[e && e.code] || 'Das hat nicht geklappt (' + (e && e.code || 'unbekannt') + ').');
+  async function ask() {
+    const q = $c('cq').value.trim(); if (!q || busy) return;
+    const sample = await getSample(); if (!sample) return;
+    busy = true; $c('cgo').disabled = true; $c('cstop').hidden = false; $c('cstate').textContent = 'Claude denkt nach …';
+    const item = document.createElement('div'); item.className = 'qa';
+    item.innerHTML = `<p class="q">${esc2(q)}</p><div class="a"><p class="ftag">Claude denkt nach …</p></div><div class="meta"></div>`;
+    $c('canswers').prepend(item);
+    const aEl = item.querySelector('.a'), meta = item.querySelector('.meta');
+    $c('cq').value = '';
+    const u = api.ST.sel && U.get(api.ST.sel);
+    const lim = await sample.limits().catch(() => ({}));
+    const useTools = !!(lim && lim.tools);
+    let ctxInfo = u ? `\nAktuell ausgewählt: Baustein „${u.label}“ [${rl(u)}]${api.ST.file ? ', Datei ' + api.ST.file : ''}.` : '';
+    if (!useTools && u) ctxInfo += '\n' + JSON.stringify(tools[0].execute({ unit: u.label })).slice(0, 12000);
+    const turns = [{ role: 'user', content: RULES + overview() }];
+    for (const h of history.slice(-3)) { turns.push({ role: 'user', content: h.q }, { role: 'assistant', content: h.a }); }
+    turns.push({ role: 'user', content: q + ctxInfo });
+    ctl = new AbortController();
+    let used = 0;
+    const counted = useTools ? tools.map((t) => ({ ...t, execute: (inp, c) => { used++; meta.textContent = `schlägt nach … (${used})`; return t.execute(inp, c); } })) : undefined;
+    try {
+      const res = await sample(turns, { cache: false, signal: ctl.signal, modelTier: 'default', ...(counted ? { tools: counted } : {}), onText: ({ text }) => { aEl.innerHTML = md(text); } });
+      aEl.innerHTML = md(res.text); history.push({ q, a: res.text });
+      meta.textContent = `${useTools ? used + ' Nachschläge in den Karten-Daten' : 'ohne Nachschlagen'}${res.truncated ? ' · gekürzt, bitte kleiner fragen' : ''}`;
+    } catch (e) {
+      if (e && e.code === 'cancelled') { if (e.text) aEl.innerHTML = md(e.text); else item.remove(); meta.textContent = e.text ? 'gestoppt' : ''; }
+      else { item.classList.add('err'); aEl.innerHTML = (e && e.text ? md(e.text) : '') + `<p>${esc2(errText(e || {}))}</p>`; }
+    } finally { busy = false; ctl = null; $c('cgo').disabled = false; $c('cstop').hidden = true; $c('cstate').textContent = ''; }
+  }
+  let samplePromise = null;
+  function getSample() {
+    if (!samplePromise) samplePromise = (async () => {
+      try { const c = window.claude; const sm = c && c.use ? await c.use('sample') : null; return sm || null; } catch { return null; }
+    })().then((sm) => { if (!sm) { $c('cnote').textContent = 'Der Chat ist nur in der veröffentlichten Artefakt-Version verfügbar. Dort fragt die Seite Claude über dein eigenes Claude-Konto, ein API-Schlüssel ist nicht nötig.'; $c('cq').disabled = true; $c('cgo').disabled = true; } return sm; });
+    return samplePromise;
+  }
+  $c('cgo').onclick = ask;
+  $c('cstop').onclick = () => ctl && ctl.abort();
+  $c('cq').onkeydown = (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ask(); } };
+  refreshCtx(); getSample();
+  $c('cnote').textContent = $c('cnote').textContent || 'Jede Frage nutzt dein eigenes Claude-Kontingent. Claude sieht nur die Strukturdaten dieser Karte, keinen Quelltext.';
+  api.onSelection = refreshCtx;
+}
+
+initChat();
+window.codemap = { select: (id) => api.select(id), open: (id, f) => api.open(id, f), fit: () => api.fit() };
+
+})();
+</script>

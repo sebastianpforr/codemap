@@ -1,0 +1,12 @@
+{
+  "name": "Mein Projekt",
+  "exclude": ["^generated/", "/legacy/"],
+  "roles": {
+    "adapter": ["clients", "sinks"],
+    "core": ["domain-services"],
+    "entrypoint": ["webhooks"]
+  },
+  "concerns": [
+    { "id": "auth", "label": "Anmeldung und Rechte", "match": "(^|[/._-])(auth|permissions|policy)([/._-]|$)", "minUsers": 3 }
+  ]
+}
